@@ -1,0 +1,3 @@
+[target.'cfg(target_os = "linux")']
+#runner = "sudo --preserve-env=RUST_LOG strace -f -e trace=network "
+runner = "sudo -E "

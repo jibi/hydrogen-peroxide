@@ -1,0 +1,33 @@
+[package]
+name = "hydrogen-peroxide"
+version = "0.0.1"
+authors = ["Gilberto Bertin <me@jibi.io>"]
+license = "AGPL-3.0-only"
+edition = "2018"
+
+[lib]
+name = "libh2o2"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hype"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { git = "https://github.com/clap-rs/clap/", tag = "v3.0.0-beta.1" }
+env_logger = "0.7"
+libc = "0.2"
+log = { version = "0.4", features = ["max_level_debug", "release_max_level_info"] }
+nix = "0.17"
+simple-signal = "1.1"
+thiserror = "1.0"
+
+[dev-dependencies]
+tun = { "git" = "https://github.com/meh/rust-tun", "rev" = "894f450" }
+
+[build-dependencies]
+bindgen = "0.54"
+
+[profile.release]
+opt-level = 3
