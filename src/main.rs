@@ -18,7 +18,7 @@
 #[macro_use]
 extern crate log;
 
-use clap::Clap;
+use clap::{ArgAction, Parser};
 use simple_signal::Signal;
 
 use std::{
@@ -29,69 +29,71 @@ use std::{
 
 use libh2o2::{echo, net, xsk};
 
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(version = env!("CARGO_PKG_VERSION"), author = "Gilberto Bertin <me@jibi.io>")]
 pub struct Args {
     /// Sets the interface
-    #[clap(short = "i", long = "interface")]
+    #[arg(short = 'i', long = "interface")]
     pub interface: String,
 
     /// Sets the bind address
-    #[clap(short = "a", long = "address")]
+    #[arg(short = 'a', long = "address")]
     pub bind_address: Ipv4Addr,
 
     /// Sets the bind port
-    #[clap(short = "p", long = "port")]
+    #[arg(short = 'p', long = "port")]
     pub bind_port: u16,
 
     /// Sets the XDP program path
-    #[clap(long = "xdp-prog-path")]
+    #[arg(long = "xdp-prog-path")]
     pub xdp_prog_path: Option<String>,
 
     /// Run on given queue
-    #[clap(long = "queue")]
+    #[arg(long = "queue")]
     pub queue: Option<Vec<usize>>,
 
     /// Sets the number of XSK socks per queue
-    #[clap(long = "socks-per-queue", validator = validate_socks_per_queue)]
+    #[arg(long = "socks-per-queue", value_parser = validate_socks_per_queue)]
     pub socks_per_queue: Option<usize>,
 
     /// Sets the RX ring size
-    #[clap(long = "rx-size")]
+    #[arg(long = "rx-size")]
     pub rx_size: Option<usize>,
 
     /// Sets the TX ring size
-    #[clap(long = "tx-size")]
+    #[arg(long = "tx-size")]
     pub tx_size: Option<usize>,
 
     /// Sets the frame size
-    #[clap(long = "frame-size")]
+    #[arg(long = "frame-size")]
     pub frame_size: Option<usize>,
 
     /// Sets the xsk mode of operation
-    #[clap(long = "xsk-mode")]
+    #[arg(long = "xsk-mode")]
     pub xsk_mode: Option<xsk::XskMode>,
 
     /// Disable the XDP_NEEDS_WAKEUP flag (required for kernels < 4.4)
-    #[clap(long = "no-needs-wakeup", parse(from_flag = parse_no_needs_wakeup))]
+    #[arg(long = "no-needs-wakeup", action=ArgAction::SetTrue, value_parser = parse_no_needs_wakeup)]
     pub needs_wakeup: xsk::NeedsWakeup,
 }
 
-fn validate_socks_per_queue(val: &str) -> Result<(), String> {
-    let val: usize = val.parse().map_err(|e: ParseIntError| e.to_string())?;
-    if !((val != 0) && ((val & (val - 1)) == 0)) {
-        return Err(String::from("not a power of 2\n"));
+fn validate_socks_per_queue(socks: &str) -> Result<usize, String> {
+    let val: usize = socks.parse().map_err(|e: ParseIntError| e.to_string())?;
+    if val != 0 && (val & (val - 1)) == 0 {
+        Ok(val)
+    } else {
+        Err("not a power of 2".to_string())
     }
-
-    Ok(())
 }
 
-fn parse_no_needs_wakeup(val: bool) -> xsk::NeedsWakeup {
-    xsk::NeedsWakeup::new(!val)
+fn parse_no_needs_wakeup(val: &str) -> Result<xsk::NeedsWakeup, String> {
+    val.parse::<bool>()
+        .map(xsk::NeedsWakeup::new)
+        .map_err(|e| e.to_string())
 }
 
 fn main() {
-    env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let args = Args::parse();
 

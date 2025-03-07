@@ -41,9 +41,11 @@ pub fn mac_to_string(addr: [u8; 6]) -> String {
 }
 
 pub fn get_phy_mac_addr(iface: &str) -> Option<[u8; 6]> {
-    for addr in getifaddrs().unwrap().filter(|v| v.interface_name == iface) {
-        if let Some(nix::sys::socket::SockAddr::Link(address)) = addr.address {
-            return Some(address.addr());
+    if let Ok(addrs) = getifaddrs() {
+        for addr in addrs.filter(|v| v.interface_name == iface) {
+            if let Some(link) = addr.address.unwrap().as_link_addr() {
+                return link.addr();
+            }
         }
     }
 
