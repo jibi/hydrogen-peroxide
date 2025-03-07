@@ -25,12 +25,12 @@ typedef int i32;
  * maps for storing mostly configuration values.
  */
 #define SINGLE_VAL_MAP(_name, _value_size)	\
-struct bpf_map_def SEC("maps") _name = {	\
-	.type = BPF_MAP_TYPE_ARRAY,		\
-	.key_size = sizeof(u32),		\
-	.value_size = sizeof(_value_size),	\
-	.max_entries = 1,			\
-};
+struct {					\
+        __uint(type, BPF_MAP_TYPE_ARRAY);	\
+        __type(key, __u32);			\
+        __type(value, sizeof(_value_size));	\
+        __uint(max_entries, 1);			\
+} _name SEC(".maps");
 
 #define get_val(type, key) ({					\
 	void *val = bpf_map_lookup_elem(&key, &(u32){0});	\

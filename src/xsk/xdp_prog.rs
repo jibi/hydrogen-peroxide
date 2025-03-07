@@ -19,11 +19,7 @@
 
 use libc::c_void;
 
-use std::{
-    ffi::CString,
-    net::Ipv4Addr,
-    {mem, ptr},
-};
+use std::{ffi::CString, net::Ipv4Addr, ptr};
 
 use crate::{
     xsk,
@@ -33,6 +29,7 @@ use crate::{
 /// An object responsible for managing the lifecycle of an XSK XDP program on a given interface.
 pub struct XdpProg {
     iface_index: u32,
+    xdp_prog:    *mut xsk::sys::xdp_program,
 }
 
 impl XdpProg {
@@ -40,34 +37,46 @@ impl XdpProg {
     pub fn load(cfg: &Configuration, queues: &Queues) -> Result<Self> {
         let iface_index = Self::if_nametoindex(cfg.interface().to_string());
 
-        let mut prog_load_attr: xsk::sys::bpf_prog_load_attr = unsafe { mem::zeroed() };
-        let mut obj: *mut xsk::sys::bpf_object = ptr::null_mut();
-        let mut prog_fd: i32 = 0;
-
         let file_cstr = CString::new(cfg.xdp_prog_path().to_string()).unwrap();
+        let program_cstr = CString::new("xdp/prog".to_string()).unwrap();
 
-        prog_load_attr.file = file_cstr.as_ptr();
-        prog_load_attr.prog_type = xsk::sys::bpf_prog_type_BPF_PROG_TYPE_XDP;
+        let xdp_prog = unsafe {
+            xsk::sys::xdp_program__open_file(
+                file_cstr.as_ptr(),
+                program_cstr.as_ptr(),
+                ptr::null_mut(),
+            )
+        };
 
-        let ret = unsafe { xsk::sys::bpf_prog_load_xattr(&prog_load_attr, &mut obj, &mut prog_fd) };
+        if xdp_prog.is_null() {
+            return Err(BpfProgLoadFailed(nix::errno::Errno::last_raw()));
+        }
+
+        let ret = unsafe {
+            xsk::sys::xdp_program__attach(
+                xdp_prog,
+                iface_index as i32,
+                xsk::sys::xdp_attach_mode_XDP_MODE_SKB,
+                0,
+            )
+        };
+
         if ret != 0 {
-            return Err(BpfProgLoadFailed(-ret));
+            return Err(BpfSetLinkXDPFailed(-ret));
         }
 
         Self::load_xdp_prog_maps(
-            obj,
+            unsafe { xsk::sys::xdp_program__bpf_obj(xdp_prog) },
             cfg.bind_address(),
             cfg.bind_port(),
             queues,
             cfg.socks_per_queue(),
         )?;
 
-        let ret = unsafe { xsk::sys::bpf_set_link_xdp_fd(iface_index as i32, prog_fd, 0) };
-        if ret != 0 {
-            return Err(BpfSetLinkXDPFailed(-ret));
-        }
-
-        Ok(XdpProg { iface_index })
+        Ok(XdpProg {
+            iface_index,
+            xdp_prog,
+        })
     }
 
     /// Setup the XSK XDP program maps.
@@ -101,7 +110,14 @@ impl XdpProg {
 
 impl Drop for XdpProg {
     fn drop(&mut self) {
-        let ret = unsafe { xsk::sys::bpf_set_link_xdp_fd(self.iface_index as i32, -1, 0) };
+        let ret = unsafe {
+            xsk::sys::xdp_program__detach(
+                self.xdp_prog,
+                self.iface_index as i32,
+                xsk::sys::xdp_attach_mode_XDP_MODE_SKB,
+                0,
+            )
+        };
         if ret < 0 {
             error!("Cannot unload XDP program: errno {}", -ret);
         }

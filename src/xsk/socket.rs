@@ -43,42 +43,38 @@ impl Socket {
         queue: usize,
         pipe_reader_fd: i32,
     ) -> Result<Self> {
-        let libbpf_flags = xsk::sys::XSK_LIBBPF_FLAGS__INHIBIT_PROG_LOAD;
-        let xdp_flags = xsk::sys::XDP_FLAGS_UPDATE_IF_NOEXIST | cfg.mode().into_xdp_flags();
-        let bind_flags = cfg.needs_wakeup().into_bind_flags() | cfg.mode().into_bind_flags();
-
-        // Initialize the XSK socket.
-        let xsk_cfg = xsk::sys::xsk_socket_config {
-            rx_size: cfg.rx_size() as u32,
-            tx_size: cfg.tx_size() as u32,
-            libbpf_flags,
-            xdp_flags,
-            bind_flags,
-        };
-
         let (socket, tx, rx) = {
             let umem = umem.write().unwrap();
 
-            let mut socket: *mut xsk::sys::xsk_socket = ptr::null_mut();
+            // Initialize the XSK socket.
+            let interface_cstr = CString::new(String::from(cfg.interface())).unwrap();
+
             let mut rx_ring: xsk::sys::xsk_ring_cons = unsafe { mem::zeroed() };
             let mut tx_ring: xsk::sys::xsk_ring_prod = unsafe { mem::zeroed() };
 
-            let interface_cstr = CString::new(String::from(cfg.interface())).unwrap();
+            let mut xsk_opts: xsk::sys::xsk_socket_opts = unsafe { mem::zeroed() };
+            xsk_opts.sz = mem::size_of::<xsk::sys::xsk_socket_opts>();
+            xsk_opts.rx = &mut rx_ring;
+            xsk_opts.tx = &mut tx_ring;
+            xsk_opts.rx_size = cfg.rx_size() as u32;
+            xsk_opts.tx_size = cfg.tx_size() as u32;
+            xsk_opts.libxdp_flags = xsk::sys::XSK_LIBXDP_FLAGS__INHIBIT_PROG_LOAD;
+            xsk_opts.bind_flags =
+                cfg.needs_wakeup().into_bind_flags() | cfg.mode().into_bind_flags();
+            xsk_opts.xdp_flags =
+                xsk::sys::XDP_FLAGS_UPDATE_IF_NOEXIST | cfg.mode().into_xdp_flags();
 
-            let ret = unsafe {
-                xsk::sys::xsk_socket__create(
-                    &mut socket,
+            let socket = unsafe {
+                xsk::sys::xsk_socket__create_opts(
                     interface_cstr.as_ptr(),
                     queue as u32,
                     umem.umem,
-                    &mut rx_ring,
-                    &mut tx_ring,
-                    &xsk_cfg,
+                    &mut xsk_opts,
                 )
             };
 
-            if ret != 0 {
-                return Err(XskSocketCreateFailed(-ret));
+            if socket.is_null() {
+                return Err(XskSocketCreateFailed(nix::errno::Errno::last_raw()));
             }
 
             // Initialize the RX ring.

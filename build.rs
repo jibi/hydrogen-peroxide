@@ -25,23 +25,29 @@ fn main() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 
     println!("cargo:rerun-if-changed=src/xsk/sys/wrapper.h");
-    println!("cargo:rerun-if-changed=deps/libbpf/src/libbpf.so");
+    println!("cargo:rerun-if-changed=deps/xdp-tools/lib/libbpf/src/libbpf.so");
     println!("cargo:rerun-if-changed=kern/xsk_kern.c");
     println!("cargo:rerun-if-changed=kern/utils.h");
 
     println!(
-        "cargo:rustc-link-search=native={}/deps/libbpf/src",
+        "cargo:rustc-link-search=native={}/deps/xdp-tools/lib/libbpf/src",
         manifest_dir
     );
     println!("cargo:rustc-link-lib=static=bpf");
+
+    println!(
+        "cargo:rustc-link-search=native={}/deps/xdp-tools/lib/libxdp",
+        manifest_dir
+    );
+    println!("cargo:rustc-link-lib=static=xdp");
 
     println!("cargo:rustc-link-lib=elf");
     println!("cargo:rustc-link-lib=z");
 
     let bindings = bindgen::Builder::default()
         .header("src/xsk/sys/wrapper.h")
-        .clang_arg("-Ideps/libbpf/include/uapi")
-        .clang_arg("-Ideps/libbpf/src")
+        .clang_arg("-Ideps/xdp-tools/lib/libbpf/src/root/usr/include")
+        .clang_arg("-Ideps/xdp-tools/headers")
         .generate()
         .expect("Unable to generate XSK bindings");
 
@@ -51,12 +57,17 @@ fn main() {
         .expect("Couldn't write bindings!");
 
     Command::new("make")
-        .args(&["-C", "kern"])
+        .args(["-C", "kern"])
         .status()
         .expect("Failed to build XSK kernel object");
 
     Command::new("make")
-        .args(&["-C", "deps/libbpf/src"])
+        .args(["-C", "deps/xdp-tools/lib/libbpf/src"])
         .status()
         .expect("Failed to build libbpf");
+
+    Command::new("make")
+        .args(["-C", "deps/xdp-tools"])
+        .status()
+        .expect("Failed to build libxdp");
 }

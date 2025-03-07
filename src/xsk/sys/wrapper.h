@@ -18,5 +18,7 @@
 #include <linux/if_link.h>
 #include <linux/if_xdp.h>
 
-#include <bpf.h>
-#include <xsk.h>
+#include <bpf/bpf.h>
+#include <bpf/libbpf.h>
+#include <xdp/xsk.h>
+#include <xdp/libxdp.h>

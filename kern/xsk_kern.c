@@ -33,12 +33,12 @@ SINGLE_VAL_MAP(socks_per_queue_map, u32);
 SINGLE_VAL_MAP(bind_addr_map, u32);
 SINGLE_VAL_MAP(bind_port_map, u16);
 
-struct bpf_map_def SEC("maps") xsks_map = {
-	.type = BPF_MAP_TYPE_XSKMAP,
-	.key_size = sizeof(i32),
-	.value_size = sizeof(i32),
-	.max_entries = 1024,
-};
+struct {
+        __uint(type, BPF_MAP_TYPE_XSKMAP);
+        __type(key, __u32);
+        __type(value, __u32);
+        __uint(max_entries, 1024);
+} xsks_map SEC(".maps");
 
 static inline
 i32 redirect_to_xsk(struct xdp_md *xdp, u16 sport) {

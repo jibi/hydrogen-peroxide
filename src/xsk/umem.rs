@@ -17,7 +17,7 @@
 
 //! UMEM sockets.
 
-use std::{mem, ptr, rc::Rc, sync::RwLock};
+use std::{mem, rc::Rc, sync::RwLock};
 
 use crate::{
     xsk,
@@ -40,6 +40,11 @@ pub struct Umem {
 unsafe impl Send for Umem {}
 
 impl Umem {
+    pub fn size(cfg: &Rc<Configuration>) -> usize {
+        (cfg.rx_size() * cfg.socks_per_queue() + cfg.tx_size() * cfg.socks_per_queue())
+            * cfg.frame_size()
+    }
+
     /// Creates a new [`Umem`] object.
     pub fn new(cfg: &Rc<Configuration>) -> Result<Self> {
         let rx_size = cfg.rx_size() * cfg.socks_per_queue();
@@ -52,35 +57,31 @@ impl Umem {
         )?));
 
         // Initialize the umem socket.
-        let umem_cfg = xsk::sys::xsk_umem_config {
-            fill_size:      rx_size as u32,
-            comp_size:      tx_size as u32,
-            frame_size:     cfg.frame_size() as u32,
-            frame_headroom: xsk::sys::XSK_UMEM__DEFAULT_FRAME_HEADROOM,
-            flags:          xsk::sys::XSK_UMEM__DEFAULT_FLAGS,
-        };
-
-        let mut umem: *mut xsk::sys::xsk_umem = ptr::null_mut();
         let mut fq_ring: xsk::sys::xsk_ring_prod = unsafe { mem::zeroed() };
         let mut cq_ring: xsk::sys::xsk_ring_cons = unsafe { mem::zeroed() };
 
-        {
+        let mut umem_opts: xsk::sys::xsk_umem_opts = unsafe { mem::zeroed() };
+        umem_opts.sz = mem::size_of::<xsk::sys::xsk_umem_opts>();
+        umem_opts.size = Self::size(cfg) as u64;
+        umem_opts.fill_size = rx_size as u32;
+        umem_opts.comp_size = tx_size as u32;
+        umem_opts.frame_size = cfg.frame_size() as u32;
+
+        let umem = {
             let frame_allocator = frame_allocator.write().unwrap();
 
-            let ret = unsafe {
-                xsk::sys::xsk_umem__create(
-                    &mut umem,
+            unsafe {
+                xsk::sys::xsk_umem__create_opts(
                     frame_allocator.buffer,
-                    ((rx_size + tx_size) * cfg.frame_size()) as u64,
                     &mut fq_ring,
                     &mut cq_ring,
-                    &umem_cfg,
+                    &mut umem_opts,
                 )
-            };
-
-            if ret != 0 {
-                return Err(XskUmemCreateFailed(-ret));
             }
+        };
+
+        if umem.is_null() {
+            return Err(XskUmemCreateFailed(nix::errno::Errno::last_raw()));
         }
 
         // Initialize the complete ring.
