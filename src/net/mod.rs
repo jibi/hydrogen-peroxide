@@ -18,6 +18,7 @@
 use std::{
     collections::HashMap,
     net::Ipv4Addr,
+    rc::Rc,
     sync::{Arc, RwLock},
 };
 
@@ -59,7 +60,7 @@ use crate::xsk;
 
 pub struct NetStack {
     configuration: Configuration,
-    xsk_handle:    Arc<RwLock<xsk::net::Handle>>,
+    xsk_handle:    Rc<RwLock<xsk::net::Handle>>,
 
     iface_mac:    [u8; 6],
     bind_address: Ipv4Addr,
@@ -81,7 +82,7 @@ unsafe impl Sync for Net {}
 
 impl Net {
     pub fn new(mut configuration: Configuration) -> Self {
-        let xsk_handle = Arc::new(RwLock::new(configuration.take_xsk_handle()));
+        let xsk_handle = Rc::new(RwLock::new(configuration.take_xsk_handle()));
 
         let (interface, bind_address, bind_port) = {
             let xsk_handle = xsk_handle.read().unwrap();

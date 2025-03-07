@@ -17,6 +17,7 @@
 
 //! libbpf bindings.
 
+#[allow(clippy::all)]
 pub mod bindings;
 pub use self::bindings::*;
 

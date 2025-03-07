@@ -17,7 +17,7 @@
 
 //! XSK producer and consumer rings.
 
-use std::sync::{Arc, RwLock};
+use std::{rc::Rc, sync::RwLock};
 
 use crate::{
     xsk,
@@ -27,21 +27,21 @@ use crate::{
 /// An `xsk_ring_prod` wrapper.
 pub struct ProdRing {
     ring:            xsk::sys::xsk_ring_prod,
-    frame_allocator: Arc<RwLock<FrameAllocator>>,
+    frame_allocator: Rc<RwLock<FrameAllocator>>,
     size:            usize,
 }
 
 /// An `xsk_ring_cons` wrapper.
 pub struct ConsRing {
     ring:            xsk::sys::xsk_ring_cons,
-    frame_allocator: Arc<RwLock<FrameAllocator>>,
+    frame_allocator: Rc<RwLock<FrameAllocator>>,
     size:            usize,
 }
 
 impl ProdRing {
     /// Wraps an `xsk_ring_prod` ring around a new [`ProdRing`] object.
     pub fn new_from_xsk_ring_prod(
-        frame_allocator: Arc<RwLock<FrameAllocator>>,
+        frame_allocator: Rc<RwLock<FrameAllocator>>,
         ring: xsk::sys::xsk_ring_prod,
         size: usize,
     ) -> Self {
@@ -98,7 +98,7 @@ impl ProdRing {
 impl ConsRing {
     /// Wraps an `xsk_ring_cons` ring around a new [`ConsRing`] object.
     pub fn new_from_xsk_ring_cons(
-        frame_allocator: Arc<RwLock<FrameAllocator>>,
+        frame_allocator: Rc<RwLock<FrameAllocator>>,
         ring: xsk::sys::xsk_ring_cons,
         size: usize,
     ) -> Self {
@@ -124,7 +124,7 @@ impl ConsRing {
 
     /// Returns the descriptor with index `idx`.
     pub fn get_desc(&mut self, idx: u32) -> Desc {
-        let desc = unsafe { xsk::sys::xsk_ring_cons__rx_desc(&mut self.ring, idx as u32) };
+        let desc = unsafe { xsk::sys::xsk_ring_cons__rx_desc(&mut self.ring, idx) };
 
         Desc::new_from_xdp_desc(
             self.frame_allocator.clone(),

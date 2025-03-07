@@ -27,11 +27,11 @@ pub struct Packet<'a> {
     pub l4_payload: Option<&'a mut [u8]>,
 }
 
-impl<'a> Packet<'a> {
+impl Packet<'_> {
     pub fn new(pkt: *mut u8, len: usize) -> Self {
-        let mut packet: Packet<'_> = Default::default();
-        packet.packet_buf = PacketBufMut::from_raw_parts(pkt, len);
-
-        packet
+        Packet::<'_> {
+            packet_buf: PacketBufMut::from_raw_parts(pkt, len),
+            ..Default::default()
+        }
     }
 }

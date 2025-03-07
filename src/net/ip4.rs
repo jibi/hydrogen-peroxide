@@ -136,7 +136,7 @@ impl Ip4Hdr {
 
         self.checksum = unsafe {
             net::utils::ntohs({
-                let buf: *const u8 = mem::transmute(&*self);
+                let buf: *const u8 = &*self as *const net::ip4::Ip4Hdr as *const u8;
                 let slice = slice::from_raw_parts(buf, 20);
 
                 let mut sum: u32 = 0;

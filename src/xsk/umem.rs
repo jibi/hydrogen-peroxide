@@ -17,10 +17,7 @@
 
 //! UMEM sockets.
 
-use std::{
-    mem, ptr,
-    sync::{Arc, RwLock},
-};
+use std::{mem, ptr, rc::Rc, sync::RwLock};
 
 use crate::{
     xsk,
@@ -31,7 +28,7 @@ use crate::{
 
 /// An UMEM socket.
 pub struct Umem {
-    pub frame_allocator: Arc<RwLock<FrameAllocator>>,
+    pub frame_allocator: Rc<RwLock<FrameAllocator>>,
     pub umem:            *mut xsk::sys::xsk_umem,
 
     cq: ConsRing,
@@ -44,12 +41,12 @@ unsafe impl Send for Umem {}
 
 impl Umem {
     /// Creates a new [`Umem`] object.
-    pub fn new(cfg: &Arc<Configuration>) -> Result<Self> {
+    pub fn new(cfg: &Rc<Configuration>) -> Result<Self> {
         let rx_size = cfg.rx_size() * cfg.socks_per_queue();
         let tx_size = cfg.tx_size() * cfg.socks_per_queue();
 
         // Initialize the frame allocator.
-        let frame_allocator = Arc::new(RwLock::new(FrameAllocator::new(
+        let frame_allocator = Rc::new(RwLock::new(FrameAllocator::new(
             rx_size + tx_size,
             cfg.frame_size(),
         )?));
@@ -165,7 +162,7 @@ mod tests {
         let mut cfg = Configuration::default();
         cfg.set_needs_wakeup(NeedsWakeup::new(false));
 
-        let umem = Umem::new(&Arc::new(cfg));
+        let umem = Umem::new(&Rc::new(cfg));
         assert!(umem.is_ok());
     }
 
@@ -175,7 +172,7 @@ mod tests {
         cfg.set_rx_size(42);
         cfg.set_needs_wakeup(NeedsWakeup::new(false));
 
-        let umem = Umem::new(&Arc::new(cfg));
+        let umem = Umem::new(&Rc::new(cfg));
         assert!(umem.is_err());
     }
 }

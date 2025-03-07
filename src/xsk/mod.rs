@@ -55,6 +55,7 @@ use std::{
     fs::File,
     io::prelude::*,
     os::unix::io::FromRawFd,
+    rc::Rc,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -77,7 +78,7 @@ unsafe impl Send for Xsk {}
 impl Xsk {
     /// Creates a new [`Xsk`] object.
     pub fn new(configuration: Configuration) -> Result<Self> {
-        let configuration = Arc::new(configuration);
+        let configuration = Rc::new(configuration);
 
         let mut threads_runner = ThreadsRunner::new();
         let mut queues = Queues::default();

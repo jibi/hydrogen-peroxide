@@ -17,7 +17,7 @@
 
 //! XDP descriptor.
 
-use std::sync::{Arc, RwLock};
+use std::{rc::Rc, sync::RwLock};
 
 use crate::{xsk, xsk::FrameAllocator};
 
@@ -27,7 +27,7 @@ use crate::{xsk, xsk::FrameAllocator};
 /// * an address used to reference a particular frame in the UMEM memory buffer
 /// * the length of the frame
 pub struct Desc {
-    frame_allocator: Arc<RwLock<FrameAllocator>>,
+    frame_allocator: Rc<RwLock<FrameAllocator>>,
     desc:            *mut xsk::sys::xdp_desc,
     index:           usize,
 }
@@ -35,7 +35,7 @@ pub struct Desc {
 impl Desc {
     /// Wraps an `xdp_desc` descriptor around a new [`Desc`] object.
     pub fn new_from_xdp_desc(
-        frame_allocator: Arc<RwLock<FrameAllocator>>,
+        frame_allocator: Rc<RwLock<FrameAllocator>>,
         desc: *mut xsk::sys::xdp_desc,
         index: usize,
     ) -> Self {
@@ -81,14 +81,14 @@ impl Desc {
 mod tests {
     use super::*;
     use std::ptr;
-    use std::sync::{Arc, RwLock};
+    use std::sync::RwLock;
 
     #[test]
     fn test_new() {
         let frame_allocator = FrameAllocator::new(4096, 4096);
         assert!(frame_allocator.is_ok());
 
-        let frame_allocator = Arc::new(RwLock::new(frame_allocator.unwrap()));
+        let frame_allocator = Rc::new(RwLock::new(frame_allocator.unwrap()));
 
         let mut xdp_desc = xsk::sys::xdp_desc {
             addr:    0,
@@ -105,7 +105,7 @@ mod tests {
         let frame_allocator = FrameAllocator::new(4096, 4096);
         assert!(frame_allocator.is_ok());
 
-        let frame_allocator = Arc::new(RwLock::new(frame_allocator.unwrap()));
+        let frame_allocator = Rc::new(RwLock::new(frame_allocator.unwrap()));
 
         let mut xdp_desc = xsk::sys::xdp_desc {
             addr:    0,

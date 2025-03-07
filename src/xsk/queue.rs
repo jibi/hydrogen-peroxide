@@ -17,7 +17,7 @@
 
 //! XSK RX/TX queue.
 
-use std::sync::{Arc, RwLock};
+use std::{rc::Rc, sync::RwLock};
 
 use crate::xsk::{Configuration, Result, Socket, ThreadsRunner, Umem};
 
@@ -49,11 +49,11 @@ pub struct Queue {
 impl Queue {
     /// Creates a new XSK [`Queue`].
     pub fn new(
-        cfg: Arc<Configuration>,
+        cfg: Rc<Configuration>,
         queue_num: usize,
         threads_runner: &ThreadsRunner,
     ) -> Result<Self> {
-        let mut umem = Arc::new(RwLock::new(Umem::new(&cfg)?));
+        let mut umem = Rc::new(RwLock::new(Umem::new(&cfg)?));
 
         let mut sockets = Vec::new();
         for _ in 0..cfg.socks_per_queue() {
@@ -126,7 +126,7 @@ pub struct QueuesSocketsRef<'a>(&'a Queues);
 
 impl<'a> From<&'a Queues> for QueuesSocketsRef<'a> {
     fn from(v: &'a Queues) -> Self {
-        QueuesSocketsRef(&v)
+        QueuesSocketsRef(v)
     }
 }
 

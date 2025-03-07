@@ -18,19 +18,12 @@
 use crate::{net::app::AppAllocator, xsk};
 
 /// Configuration builder for a App object.
+#[derive(Default)]
 pub struct Configuration {
     app_allocator: Option<Box<AppAllocator>>,
     xsk_handle:    Option<xsk::net::Handle>,
 }
 
-impl Default for Configuration {
-    fn default() -> Self {
-        Configuration {
-            app_allocator: None,
-            xsk_handle:    None,
-        }
-    }
-}
 
 impl Configuration {
     /// Set the AppAllocator callback.

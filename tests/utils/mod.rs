@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use anyhow;
 use tun::Device;
 
 use std::{
@@ -96,21 +95,21 @@ pub fn init_xsk(
 }
 
 pub fn test_echo_server(dev: &mut tun::platform::Device, queue: usize) {
-    let mut tx_buf = [0 as u8; 1024];
+    let mut tx_buf = [0_u8; 1024];
     let mut tx_packet = build_tx_packet(dev.name(), &mut tx_buf, 8000).unwrap();
 
     test_echo_server_with_tx_packet(dev, queue, &mut tx_packet, 512, false);
 }
 
 pub fn test_echo_server_odd_src_port(dev: &mut tun::platform::Device, queue: usize) {
-    let mut tx_buf = [0 as u8; 1024];
+    let mut tx_buf = [0_u8; 1024];
     let mut tx_packet = build_tx_packet(dev.name(), &mut tx_buf, 8001).unwrap();
 
     test_echo_server_with_tx_packet(dev, queue, &mut tx_packet, 512, false);
 }
 
 pub fn test_echo_server_repeated(dev: &mut tun::platform::Device, queue: usize) {
-    let mut tx_buf = [0 as u8; 1024];
+    let mut tx_buf = [0_u8; 1024];
     let mut tx_packet = build_tx_packet(dev.name(), &mut tx_buf, 8000).unwrap();
 
     test_echo_server_with_tx_packet(dev, queue, &mut tx_packet, 1, true);

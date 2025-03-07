@@ -17,11 +17,7 @@
 
 //! XSK sockets.
 
-use std::{
-    ffi::CString,
-    io, mem, ptr,
-    sync::{Arc, RwLock},
-};
+use std::{ffi::CString, io, mem, ptr, rc::Rc, sync::RwLock};
 
 use crate::{
     xsk,
@@ -42,8 +38,8 @@ unsafe impl Send for Socket {}
 impl Socket {
     /// Create a new XSK socket.
     pub fn new(
-        cfg: Arc<Configuration>,
-        umem: &mut Arc<RwLock<Umem>>,
+        cfg: Rc<Configuration>,
+        umem: &mut Rc<RwLock<Umem>>,
         queue: usize,
         pipe_reader_fd: i32,
     ) -> Result<Self> {
@@ -166,7 +162,7 @@ impl Socket {
 /// An object responsible for handling the RX logic of an XSK [`Socket`].
 pub struct RxSocket {
     rx:   ConsRing,
-    umem: Arc<RwLock<Umem>>,
+    umem: Rc<RwLock<Umem>>,
 
     poll_fds: [libc::pollfd; 2],
 }
@@ -199,7 +195,7 @@ impl RxSocket {
     }
 
     /// RX loop
-    fn run_rx_loop(&mut self, umem: &Arc<RwLock<Umem>>, net: &mut Box<dyn net::Net>) -> Result<()> {
+    fn run_rx_loop(&mut self, umem: &Rc<RwLock<Umem>>, net: &mut Box<dyn net::Net>) -> Result<()> {
         match self.poll() {
             Ok(ret) => {
                 if ret <= 0 {
@@ -240,7 +236,7 @@ impl RxSocket {
 pub struct TxSocket {
     tx:     ProdRing,
     socket: *mut xsk::sys::xsk_socket,
-    umem:   Arc<RwLock<Umem>>,
+    umem:   Rc<RwLock<Umem>>,
 
     needs_wakeup: NeedsWakeup,
 
@@ -248,7 +244,7 @@ pub struct TxSocket {
     ready_for_tx_slots: Vec<bool>,
 
     // Keep a reference to the XSK configuration as it will be exposed by the Handle trait
-    configuration: Arc<Configuration>,
+    configuration: Rc<Configuration>,
 }
 
 impl TxSocket {
@@ -373,12 +369,12 @@ mod tests {
         let _dev = init_tun(TUN_IFNAME.to_string());
 
         let mut cfg = Configuration::default();
-        cfg.set_interface(TUN_IFNAME.to_string());
+        cfg.set_interface(TUN_IFNAME);
         cfg.set_needs_wakeup(NeedsWakeup::new(false));
 
-        let cfg = Arc::new(cfg);
+        let cfg = Rc::new(cfg);
 
-        let mut umem = Arc::new(RwLock::new(Umem::new(&cfg).unwrap()));
+        let mut umem = Rc::new(RwLock::new(Umem::new(&cfg).unwrap()));
 
         let mut pipe_fds = [0; 2];
         unsafe {

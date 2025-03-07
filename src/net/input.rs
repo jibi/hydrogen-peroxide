@@ -86,7 +86,7 @@ impl net::Net {
 
         self.update_arp_cache_from_arp(packet);
 
-        self.send_arp_reply(&packet)?;
+        self.send_arp_reply(packet)?;
 
         Ok(())
     }

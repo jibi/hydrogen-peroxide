@@ -41,7 +41,7 @@ fn libbpf_smp_rwmb() {
 pub unsafe fn xsk_ring_prod__fill_addr(fill: *mut xsk_ring_prod, idx: u32) -> *mut u64 {
     let addrs = (*fill).ring as *mut u64;
 
-    addrs.offset((idx & (*fill).mask) as isize) as *mut u64
+    addrs.offset((idx & (*fill).mask) as isize)
 }
 
 #[inline(always)]
@@ -49,7 +49,7 @@ pub unsafe fn xsk_ring_prod__fill_addr(fill: *mut xsk_ring_prod, idx: u32) -> *m
 pub unsafe fn xsk_ring_cons__comp_addr(comp: *mut xsk_ring_cons, idx: u32) -> *mut u64 {
     let addrs = (*comp).ring as *mut u64;
 
-    addrs.offset((idx & (*comp).mask) as isize) as *mut u64
+    addrs.offset((idx & (*comp).mask) as isize)
 }
 
 #[inline(always)]

@@ -61,7 +61,7 @@ impl EchoApp {
             std::thread::sleep(std::time::Duration::from_millis(50));
 
             let mut netstack_handle = netstack_handle.write().unwrap();
-            EchoApp::send_echo_response(&mut *netstack_handle, &socket, &*rx_payload).unwrap();
+            EchoApp::send_echo_response(&mut *netstack_handle, &socket, &rx_payload).unwrap();
         });
 
         Ok(())

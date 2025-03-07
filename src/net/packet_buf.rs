@@ -34,7 +34,7 @@ pub struct PacketBufMut<'a> {
     phantom: PhantomData<&'a mut [u8]>,
 }
 
-impl<'a> Default for PacketBufMut<'a> {
+impl Default for PacketBufMut<'_> {
     fn default() -> Self {
         PacketBufMut {
             buffer_ptr: ptr::null_mut(),
@@ -166,7 +166,7 @@ pub struct PacketBuf<'a> {
     phantom: PhantomData<&'a [u8]>,
 }
 
-impl<'a> Default for PacketBuf<'a> {
+impl Default for PacketBuf<'_> {
     fn default() -> Self {
         PacketBuf {
             buffer_ptr: ptr::null_mut(),
